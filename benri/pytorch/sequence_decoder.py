@@ -75,7 +75,7 @@ class SequenceDecoder(nn.Module, Configurable):
             if is_train:
                 out = out_dist.sample()
             else:
-                out = out.argmax(1)[1]
+                out = out_dist.probs.argmax(1)
 
             out = out.long()
             outputs += [out.unsqueeze(1)]

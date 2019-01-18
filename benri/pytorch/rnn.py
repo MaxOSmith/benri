@@ -61,7 +61,7 @@ class RNN(nn.Module, Configurable):
         if self.params["cell_type"] == "LSTM":
             return 2 * self.params["hidden_size"]
         else:
-            return 1 * self.params["hidden_size"]
+            return self.params["hidden_size"]
 
     @staticmethod
     def default_params():
