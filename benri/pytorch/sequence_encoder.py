@@ -31,10 +31,10 @@ class SequenceEncoder(nn.Module, Configurable):
         """
         if hidden_state is None:
             hidden_state = self.rnn.init_state(sequence.shape[0])
-
+        
         # Sort the sequences by length for packing.
-        sequence_length, new_indices = sequence_length.sort(0, descending=True)
-        sequence = sequence[new_indices]
+        sequence_length, new_indices = torch.sort(sequence_length, dim=0, descending=True)
+        sequence = sequence[new_indices]        
 
         # Pack the sequences.
         packed_sequence = pack_padded_sequence(
@@ -58,11 +58,15 @@ class SequenceEncoder(nn.Module, Configurable):
             hidden_state = (
                 hidden_state[0][:, original_indices],
                 hidden_state[1][:, original_indices])
+            hidden_state = torch.cat(hidden_state, dim=2)
+
         else:
             hidden_state = hidden_state[:, original_indices]
 
-        return output, hidden_state
+        # Remove the sequence dimension from the hidden state.
+        hidden_state = hidden_state.squeeze(0)
 
+        return output, hidden_state
 
     @staticmethod
     def default_params():

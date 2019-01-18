@@ -16,6 +16,12 @@ class RNN(nn.Module, Configurable):
         nn.Module.__init__(self)
         Configurable.__init__(self, params=params)
 
+        # Check for unimplemented conditions.
+        if self.params["bidirectional"]:
+            raise ValueError("Bidirectional not implemented.")
+        if self.params["n_layers"] != 1:
+            raise ValueError("More than 1 layer not implemented.")
+
         # Locate and build the cell.
         cell_ctor = locate("torch.nn.{}".format(self.params["cell_type"]))
         if cell_ctor is None:
@@ -49,6 +55,13 @@ class RNN(nn.Module, Configurable):
             return (h, c)
 
         return h
+
+    @property
+    def hidden_size(self):
+        if self.params["cell_type"] == "LSTM":
+            return 2 * self.params["hidden_size"]
+        else:
+            return 1 * self.params["hidden_size"]
 
     @staticmethod
     def default_params():

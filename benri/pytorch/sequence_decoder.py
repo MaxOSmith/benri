@@ -36,12 +36,8 @@ class SequenceDecoder(nn.Module, Configurable):
         :return:
 
         """
-        if is_train and target is None:
-            raise ValueError("Teacher forcing requires a target sequence.")
-
-
         batch_size = hidden_state.shape[0]
-
+        # Add the sequence dimension to the hidden state. [B, E] -> [S, B, E].
         hidden_state = hidden_state.unsqueeze(0)
 
         # LSTM needs to have two states.
@@ -59,28 +55,41 @@ class SequenceDecoder(nn.Module, Configurable):
         # Start by feeding the decoder the <SOS> token.
         out = torch.ones(batch_size, dtype=torch.long) * self.params["sos"]
         outputs = []
+        output_dists = []
 
         for i in range(seq_len):
             # Teacher forcing, after first symbol.
-            if is_train and i:
+            if target is not None and i:
                 out = target[:, i]
 
-            out = self.embedder(out)
-            out = out.unsqueeze(1)
+            out = self.embedder(out)  # [B, E]
+            out = out.unsqueeze(1)    # [B, 1, E]
 
-            out, hidden_state = self.rnn(out, hidden_state)
+            out_dist, hidden_state = self.rnn(out, hidden_state)
 
-            out = out.squeeze(1)
-            out = self.projection(out)
-            out = self.softmax(out)
-            # TODO(maxsmith): Sampling.
-            out = out.max(1)[1]
+            out_dist = out_dist.squeeze(1)        # [B, 1, E] --> [B, E]
+            out_dist = self.projection(out_dist)  # [B, E] --> [B, V]
+
+            out_dist = torch.distributions.Categorical(logits=out_dist)
+
+            if is_train:
+                out = out_dist.sample()
+            else:
+                out = out.argmax(1)[1]
+
             out = out.long()
-
             outputs += [out.unsqueeze(1)]
+            output_dists += [out_dist.probs]
 
         outputs = torch.cat(outputs, dim=1)
-        return outputs
+        output_dists = torch.cat(output_dists, dim=1)
+
+        # Calculate the sequence length.
+        length = outputs == self.params["eos"]
+        _, length = length.max(1)
+        length += 1  # argmax accounts for 0 index.
+
+        return outputs, output_dists, hidden_state, length
 
     @staticmethod
     def default_params():
@@ -88,4 +97,4 @@ class SequenceDecoder(nn.Module, Configurable):
             "rnn.params": {},
             "sos": 23,
             "eos": 24,
-            "max_length": 10}
+            "max_length": 6}
