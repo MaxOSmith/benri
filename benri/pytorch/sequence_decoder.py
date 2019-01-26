@@ -4,6 +4,7 @@ Resources:
  - https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
  - https://github.com/bentrevett/pytorch-seq2seq/blob/master/1%20-%20Sequence%20to%20Sequence%20Learning%20with%20Neural%20Networks.ipynb
 """
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -21,11 +22,12 @@ class SequenceDecoder(nn.Module, Configurable):
             self.rnn = rnn
         else:
             self.rnn = RNN(self.params["rnn.params"])
-            
+
         self.embedder = vocab_embedder
-        self.projection = nn.Linear(
-            self.rnn.params["hidden_size"],
-            self.embedder.num_embeddings)
+        if self.params["projection"]:
+            self.projection = nn.Linear(
+                self.rnn.params["hidden_size"],
+                self.embedder.num_embeddings)
         self.softmax = nn.Softmax()
 
     def forward(self, hidden_state, target=None, is_train=True):
@@ -51,6 +53,7 @@ class SequenceDecoder(nn.Module, Configurable):
         out = torch.ones(batch_size, dtype=torch.long) * self.params["sos"]
         outputs = []
         output_dists = []
+        hidden_states = []
 
         for i in range(seq_len):
             # Teacher forcing, after first symbol.
@@ -63,7 +66,8 @@ class SequenceDecoder(nn.Module, Configurable):
             out_dist, hidden_state = self.rnn(out, hidden_state)
 
             out_dist = out_dist.squeeze(1)        # [B, 1, E] --> [B, E]
-            out_dist = self.projection(out_dist)  # [B, E] --> [B, V]
+            if self.params["projection"]:
+                out_dist = self.projection(out_dist)  # [B, E] --> [B, V]
 
             out_dist = torch.distributions.Categorical(logits=out_dist)
 
@@ -75,6 +79,7 @@ class SequenceDecoder(nn.Module, Configurable):
             out = out.long()
             outputs += [out.unsqueeze(1)]
             output_dists += [out_dist.probs]
+            hidden_states += [hidden_state.unsqueeze(1)]
 
         outputs = torch.cat(outputs, dim=1)
         output_dists = torch.cat(output_dists, dim=1)
@@ -84,12 +89,18 @@ class SequenceDecoder(nn.Module, Configurable):
         _, length = length.max(1)
         length += 1  # argmax accounts for 0 index.
 
+        # Get the right hidden states.
+        hidden_states = torch.cat(hidden_states, dim=1)
+        batch_i = np.arange(batch_size)
+        hidden_state = hidden_states[batch_i, length-1]
+
         return outputs, output_dists, hidden_state, length
 
     @staticmethod
     def default_params():
         return {
-            "rnn.params": {},
             "sos": 23,
             "eos": 24,
-            "max_length": 6}
+            "max_length": 6,
+            "rnn.params": {},
+            "projection": True}

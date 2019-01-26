@@ -9,11 +9,14 @@ from benri.pytorch.sequence_encoder import SequenceEncoder
 def _add_one_state_rnn(x, h):
     """ RNN that increases the state by one each timestep. """
     h += 1
+    print("x", x)
+    print("h", h)
     return x, h
 
 
 def test_basic():
     """ Basic API test. """
+    print()
     seq_enc = SequenceEncoder(rnn=_add_one_state_rnn, params={})
 
     sequence = torch.tensor([

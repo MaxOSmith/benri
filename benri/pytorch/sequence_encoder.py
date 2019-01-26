@@ -70,3 +70,47 @@ class SequenceEncoder(nn.Module, Configurable):
     def default_params():
         return {
             "rnn.params": {}}
+
+
+class UnpackedSequenceEncoder(nn.Module, Configurable):
+
+    def __init__(self, rnn=None, params={}):
+        """
+
+        :param rnn: RNN cell to encode with.
+        :param params: Configuration dictionary.
+        """
+        nn.Module.__init__(self)
+        Configurable.__init__(self, params=params)
+
+        if rnn:
+            self.rnn = rnn
+        else:
+            self.rnn = RNN(self.params["rnn.params"])
+
+    def forward(self, sequence, sequence_length, hidden_state=None, is_train=True):
+        """ Process sequences.
+
+        :param sequence: Sequence to encode [B, S, E].
+        :param sequence_length: Length of the sequences [B].
+          - Note: All sequences must have length >0.
+        :param hidden_state: Optional initial hidden state of RNN.
+        :param is_train: Boolean.
+        :return:
+        """
+        if hidden_state is None:
+            hidden_state = self.rnn.init_state(sequence.shape[0])
+
+        raise NotImplementedError("")
+
+        # Process the sequences with the RNN.
+        packed_output, hidden_state = self.rnn(
+            packed_sequence,
+            hidden_state)
+
+        return output, hidden_state
+
+    @staticmethod
+    def default_params():
+        return {
+            "rnn.params": {}}
