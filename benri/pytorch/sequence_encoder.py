@@ -14,27 +14,36 @@ from benri.configurable import Configurable
 
 class SequenceEncoder(nn.Module, Configurable):
 
-    def __init__(self, params={}):
+    def __init__(self, rnn=None, params={}):
+        """
+
+        :param rnn: RNN cell to encode with.
+        :param params: Configuration dictionary.
+        """
         nn.Module.__init__(self)
         Configurable.__init__(self, params=params)
 
-        self.rnn = RNN(self.params["rnn.params"])
+        if rnn:
+            self.rnn = rnn
+        else:
+            self.rnn = RNN(self.params["rnn.params"])
 
     def forward(self, sequence, sequence_length, hidden_state=None, is_train=True):
-        """
+        """ Process sequences.
 
-        :param sequence:
-        :param sequence_length:
-        :param hidden_state:
-        :param is_train:
+        :param sequence: Sequence to encode [B, S, E].
+        :param sequence_length: Length of the sequences [B].
+          - Note: All sequences must have length >0.
+        :param hidden_state: Optional initial hidden state of RNN.
+        :param is_train: Boolean.
         :return:
         """
         if hidden_state is None:
             hidden_state = self.rnn.init_state(sequence.shape[0])
-        
+
         # Sort the sequences by length for packing.
         sequence_length, new_indices = torch.sort(sequence_length, dim=0, descending=True)
-        sequence = sequence[new_indices]        
+        sequence = sequence[new_indices]
 
         # Pack the sequences.
         packed_sequence = pack_padded_sequence(
@@ -53,18 +62,7 @@ class SequenceEncoder(nn.Module, Configurable):
         # Unsort the sequences.
         _, original_indices = new_indices.sort(0)
         output = output[original_indices]
-
-        if self.rnn.params["cell_type"] == "LSTM":
-            hidden_state = (
-                hidden_state[0][:, original_indices],
-                hidden_state[1][:, original_indices])
-            hidden_state = torch.cat(hidden_state, dim=2)
-
-        else:
-            hidden_state = hidden_state[:, original_indices]
-
-        # Remove the sequence dimension from the hidden state.
-        hidden_state = hidden_state.squeeze(0)
+        hidden_state = hidden_state[original_indices]
 
         return output, hidden_state
 

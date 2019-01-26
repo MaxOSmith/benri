@@ -1,4 +1,1 @@
-from benri.tensorflow.tensorboard_logger import TensorboardLogger
-
-
-__all__ = ["TensorboardLogger"]
+""" Module full of Tensorflow utility operations. """

@@ -13,11 +13,15 @@ from benri.configurable import Configurable
 
 class SequenceDecoder(nn.Module, Configurable):
 
-    def __init__(self, vocab_embedder, params={}):
+    def __init__(self, vocab_embedder, rnn=None, params={}):
         nn.Module.__init__(self)
         Configurable.__init__(self, params=params)
 
-        self.rnn = RNN(self.params["rnn.params"])
+        if rnn:
+            self.rnn = rnn
+        else:
+            self.rnn = RNN(self.params["rnn.params"])
+            
         self.embedder = vocab_embedder
         self.projection = nn.Linear(
             self.rnn.params["hidden_size"],
@@ -37,15 +41,6 @@ class SequenceDecoder(nn.Module, Configurable):
 
         """
         batch_size = hidden_state.shape[0]
-        # Add the sequence dimension to the hidden state. [B, E] -> [S, B, E].
-        hidden_state = hidden_state.unsqueeze(0)
-
-        # LSTM needs to have two states.
-        if self.rnn.params["cell_type"] == "LSTM":
-            hidden_state = torch.split(
-                hidden_state,
-                [self.rnn.params["hidden_size"], self.rnn.params["hidden_size"]],
-                dim=2)
 
         # Determine the maximum number of iterations to perform.
         seq_len = self.params["max_length"]

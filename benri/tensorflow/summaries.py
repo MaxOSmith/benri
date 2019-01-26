@@ -1,7 +1,7 @@
 """ Utility functions for constructing summaries. """
-from StringIO import StringIO
+import io
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
@@ -13,18 +13,19 @@ def scalar(tag, value):
     :param value: Scalar value.
     """
     summary = tf.Summary.Value(tag=tag, simple_value=value)
-    summary = tf.Summary(value=summary)
+    summary = tf.Summary(value=[summary])
     return summary
 
 
+"""
 def image(tag, image):
-    """ Construct an image summary.
+    Construct an image summary.
 
     :param tag: Name of the scalar.
     :param image: Image [H, W, C].
-    """
+    
     # Write the image to a string.
-    s = StringIO()
+    s = io.StringIO()
     plt.imsave(s, image, format="png")
 
     image_summary = tf.Summary.Image(
@@ -33,8 +34,9 @@ def image(tag, image):
         width=image.shape[1])
 
     summary = tf.Summary.Value(tag=tag, image=summary)
-    summary = tf.Summary(value=summary)
+    summary = tf.Summary(value=[summary])
     return summary
+"""
 
 
 def histogram(tag, values, bins=1000):
