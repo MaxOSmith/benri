@@ -83,6 +83,10 @@ class RNN(nn.Module, Configurable):
         else:
             return self.params["hidden_size"]
 
+    @property
+    def output_size(self):
+        return self.params["hidden_size"]
+
     @staticmethod
     def default_params():
         return {

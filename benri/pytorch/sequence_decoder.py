@@ -26,7 +26,7 @@ class SequenceDecoder(nn.Module, Configurable):
         self.embedder = vocab_embedder
         if self.params["projection"]:
             self.projection = nn.Linear(
-                self.rnn.params["hidden_size"],
+                self.rnn.output_size,
                 self.embedder.num_embeddings)
         self.softmax = nn.Softmax()
 
