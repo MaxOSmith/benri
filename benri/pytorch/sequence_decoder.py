@@ -99,8 +99,8 @@ class SequenceDecoder(nn.Module, Configurable):
     @staticmethod
     def default_params():
         return {
-            "sos": 23,
-            "eos": 24,
+            "sos": 9,
+            "eos": 10,
             "max_length": 6,
             "rnn.params": {},
             "projection": True}
