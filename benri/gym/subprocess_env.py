@@ -13,57 +13,6 @@ from benri.cloudpickle_wrapper import CloudpickleWrapper
 from benri.gym.env import Env
 
 
-def worker_process(
-    pid: int, 
-    remote: Connection, 
-    parent_remote: Connection, 
-    pickled_env_ctor: CloudpickleWrapper):
-    """ Worker processes that handles a single env.
-
-    :param pid: Process ID.
-    :param remote: 
-    :param parent_remote:
-    :param pickled_env_ctor: 
-    """
-    # TODO(max): Understand.
-    parent_remote.close()
-
-    # Get data from pickle, which is our ctor and call it.
-    env = pickled_env_ctor.data()
-
-    try: 
-        # Process incoming env requests.
-        while True:    
-            # Wait on request.
-            cmd, data = remote.recv()
-
-            if cmd == "step":
-                o, r, done, info = env.step(data)
-                remote.send((o, r, done, info))
-
-            elif cmd == "reset":
-                o = env.reset()
-                remote.send(o)
-
-            elif cmd == "close":
-                remote.close()
-                break
-
-            # Allow `SubprocessEnv` to ask any env what the obs and act spaces
-            # are across the envs it is managing.
-            elif cmd == "_spaces":
-                remote.send((env.observation_space, env.action_space))
-
-            else:
-                raise NotImplementedError("Unknown command: {}".format(cmd))
-
-    except KeyboardInterrupt:
-        print("SubprocessEnv worker {}: KeyboardInterrupt".format(pid))
-
-    finally:
-        env.close()
-
-
 class SubprocessEnv(Env):
     """ Manages multiple envs in subprocesses through pipes.
 
@@ -165,6 +114,57 @@ class SubprocessEnv(Env):
     def _assert_not_closed(self):
         """ Assert that the envs & connections are not closed. """
         assert not self.closed, "Cannot use a SubprocessEnv after calling `close()`"
+
+
+def worker_process(
+    pid: int, 
+    remote: Connection, 
+    parent_remote: Connection, 
+    pickled_env_ctor: CloudpickleWrapper):
+    """ Worker processes that handles a single env.
+
+    :param pid: Process ID.
+    :param remote: 
+    :param parent_remote:
+    :param pickled_env_ctor: 
+    """
+    # TODO(max): Understand.
+    parent_remote.close()
+
+    # Get data from pickle, which is our ctor and call it.
+    env = pickled_env_ctor.data()
+
+    try: 
+        # Process incoming env requests.
+        while True:    
+            # Wait on request.
+            cmd, data = remote.recv()
+
+            if cmd == "step":
+                o, r, done, info = env.step(data)
+                remote.send((o, r, done, info))
+
+            elif cmd == "reset":
+                o = env.reset()
+                remote.send(o)
+
+            elif cmd == "close":
+                remote.close()
+                break
+
+            # Allow `SubprocessEnv` to ask any env what the obs and act spaces
+            # are across the envs it is managing.
+            elif cmd == "_spaces":
+                remote.send((env.observation_space, env.action_space))
+
+            else:
+                raise NotImplementedError("Unknown command: {}".format(cmd))
+
+    except KeyboardInterrupt:
+        print("SubprocessEnv worker {}: KeyboardInterrupt".format(pid))
+
+    finally:
+        env.close()
 
 
 def _flatten_obs(obs):

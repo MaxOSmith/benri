@@ -61,7 +61,7 @@ def _parse_params(params, default_params):
 class Configurable(object):
     """ Abstract base class for classes parameterized with a dict. """
 
-    def __init__(self, params, verbose=True):
+    def __init__(self, params, verbose=False):
         """ Constructor.
 
         :param params: Parameter dictionary. Must have same keys and value type
